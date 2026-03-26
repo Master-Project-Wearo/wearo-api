@@ -6,48 +6,48 @@ import { UpdateAiConversationDto } from './dto/update-ai-conversation.dto';
 
 @Injectable()
 export class AiConversationsService {
-	constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-	create(data: CreateAiConversationDto) {
-		const prismaData: Prisma.ai_conversationsUncheckedCreateInput = {
-			...data,
-			created_at: new Date(data.created_at),
-		};
+  create(data: CreateAiConversationDto) {
+    const prismaData: Prisma.ai_conversationsUncheckedCreateInput = {
+      ...data,
+      created_at: new Date(data.created_at),
+    };
 
-		return this.prisma.ai_conversations.create({ data: prismaData });
-	}
+    return this.prisma.ai_conversations.create({ data: prismaData });
+  }
 
-	findAll() {
-		return this.prisma.ai_conversations.findMany();
-	}
+  findAll() {
+    return this.prisma.ai_conversations.findMany();
+  }
 
-	findOne(aiConversationId: string) {
-		return this.prisma.ai_conversations.findUnique({
-			where: { ai_conversation_id: aiConversationId },
-		});
-	}
+  findOne(aiConversationId: string) {
+    return this.prisma.ai_conversations.findUnique({
+      where: { ai_conversation_id: aiConversationId },
+    });
+  }
 
-	update(aiConversationId: string, data: UpdateAiConversationDto) {
-		const { created_at, ...rest } = data;
+  update(aiConversationId: string, data: UpdateAiConversationDto) {
+    const { created_at, ...rest } = data;
 
-		const prismaData: Prisma.ai_conversationsUncheckedUpdateInput = {
-			...rest,
-			...(created_at !== undefined
-				? {
-						created_at: new Date(created_at),
-					}
-				: {}),
-		};
+    const prismaData: Prisma.ai_conversationsUncheckedUpdateInput = {
+      ...rest,
+      ...(created_at !== undefined
+        ? {
+            created_at: new Date(created_at),
+          }
+        : {}),
+    };
 
-		return this.prisma.ai_conversations.update({
-			where: { ai_conversation_id: aiConversationId },
-			data: prismaData,
-		});
-	}
+    return this.prisma.ai_conversations.update({
+      where: { ai_conversation_id: aiConversationId },
+      data: prismaData,
+    });
+  }
 
-	remove(aiConversationId: string) {
-		return this.prisma.ai_conversations.delete({
-			where: { ai_conversation_id: aiConversationId },
-		});
-	}
+  remove(aiConversationId: string) {
+    return this.prisma.ai_conversations.delete({
+      where: { ai_conversation_id: aiConversationId },
+    });
+  }
 }

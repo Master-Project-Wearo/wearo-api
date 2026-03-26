@@ -6,48 +6,48 @@ import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
-	constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-	create(data: CreateUserDto) {
-		const prismaData: Prisma.usersUncheckedCreateInput = {
-			...data,
-			date_of_birth: new Date(data.date_of_birth),
-		};
+  create(data: CreateUserDto) {
+    const prismaData: Prisma.usersUncheckedCreateInput = {
+      ...data,
+      date_of_birth: new Date(data.date_of_birth),
+    };
 
-		return this.prisma.users.create({ data: prismaData });
-	}
+    return this.prisma.users.create({ data: prismaData });
+  }
 
-	findAll() {
-		return this.prisma.users.findMany();
-	}
+  findAll() {
+    return this.prisma.users.findMany();
+  }
 
-	findOne(userId: string) {
-		return this.prisma.users.findUnique({
-			where: { user_id: userId },
-		});
-	}
+  findOne(userId: string) {
+    return this.prisma.users.findUnique({
+      where: { user_id: userId },
+    });
+  }
 
-	update(userId: string, data: UpdateUserDto) {
-		const { date_of_birth, ...rest } = data;
+  update(userId: string, data: UpdateUserDto) {
+    const { date_of_birth, ...rest } = data;
 
-		const prismaData: Prisma.usersUncheckedUpdateInput = {
-			...rest,
-			...(date_of_birth !== undefined
-				? {
-						date_of_birth: new Date(date_of_birth),
-					}
-				: {}),
-		};
+    const prismaData: Prisma.usersUncheckedUpdateInput = {
+      ...rest,
+      ...(date_of_birth !== undefined
+        ? {
+            date_of_birth: new Date(date_of_birth),
+          }
+        : {}),
+    };
 
-		return this.prisma.users.update({
-			where: { user_id: userId },
-			data: prismaData,
-		});
-	}
+    return this.prisma.users.update({
+      where: { user_id: userId },
+      data: prismaData,
+    });
+  }
 
-	remove(userId: string) {
-		return this.prisma.users.delete({
-			where: { user_id: userId },
-		});
-	}
+  remove(userId: string) {
+    return this.prisma.users.delete({
+      where: { user_id: userId },
+    });
+  }
 }
