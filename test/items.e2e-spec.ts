@@ -98,7 +98,9 @@ describe('ItemsController (e2e)', () => {
     expect(Array.isArray(listResponse.body)).toBe(true);
     expect(listResponse.body.length).toBeLessThanOrEqual(1);
     expect(
-      listResponse.body.some((item: { item_id: string }) => item.item_id === createdItemId),
+      listResponse.body.some(
+        (item: { item_id: string }) => item.item_id === createdItemId,
+      ),
     ).toBe(true);
 
     const updateResponse = await request(app.getHttpServer())
