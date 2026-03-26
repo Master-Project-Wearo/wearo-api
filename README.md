@@ -31,6 +31,49 @@
 $ npm install
 ```
 
+## Authentication
+
+This API now uses the standard NestJS JWT stack (`@nestjs/passport` + `passport-jwt`) with a global guard.
+
+- All routes are protected by default.
+- Public routes:
+  - `GET /`
+  - `GET /auth/health`
+- `GET /auth/me` returns the decoded authenticated user from the bearer token.
+
+Set one of these environment variables:
+
+- `SUPABASE_JWT_SECRET` (recommended when tokens come from Supabase)
+- `JWT_SECRET` (fallback)
+
+In tests, if neither is provided, a test-only fallback secret is used automatically.
+
+## Ownership Rules
+
+Ownership is now enforced from the JWT `sub` claim (current authenticated user id):
+
+- User-owned resources are filtered by JWT identity in the API layer.
+- Incoming `user_id` for owned creates is ignored in favor of `JWT.sub`.
+- Accessing another user's resource returns not found or forbidden depending on route context.
+
+Covered user-owned resources:
+
+- `users` (self profile only)
+- `items`
+- `outfits`
+- `schedules`
+- `ai-conversations`
+- `ai-messages` (through owned conversation/outfit)
+- `outfit-items` (both linked resources must be owned)
+
+## Password Storage
+
+If you use Supabase Auth for login, do not add a custom plaintext password column in your app tables.
+
+- Email/password credentials are handled and hashed by Supabase Auth.
+- Your `users` table should remain a profile/business table.
+- The API should trust JWT claims and enforce ownership/authorization on data access.
+
 ## Compile and run the project
 
 ```bash

@@ -50,8 +50,9 @@ export class CreateItemDto {
   @IsDateString()
   added_at!: string;
 
+  @IsOptional()
   @IsUUID()
-  user_id!: string;
+  user_id?: string;
 
   @IsOptional()
   @IsUUID()

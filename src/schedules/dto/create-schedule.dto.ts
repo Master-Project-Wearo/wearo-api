@@ -1,4 +1,4 @@
-import { IsDateString, IsUUID } from 'class-validator';
+import { IsDateString, IsOptional, IsUUID } from 'class-validator';
 
 export class CreateScheduleDto {
   @IsDateString()
@@ -7,8 +7,9 @@ export class CreateScheduleDto {
   @IsDateString()
   created_at!: string;
 
+  @IsOptional()
   @IsUUID()
-  user_id!: string;
+  user_id?: string;
 
   @IsUUID()
   outfit_id!: string;

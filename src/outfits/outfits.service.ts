@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ListQueryDto } from '../common/dto/list-query.dto';
@@ -10,43 +10,57 @@ import { UpdateOutfitDto } from './dto/update-outfit.dto';
 export class OutfitsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(data: CreateOutfitDto) {
+  create(data: CreateOutfitDto, currentUserId: string) {
+    const { user_id: _ignoredUserId, ...rest } = data;
+
     const prismaData: Prisma.outfitsUncheckedCreateInput = {
-      ...data,
-      created_at: new Date(data.created_at),
+      ...rest,
+      user_id: currentUserId,
+      created_at: new Date(rest.created_at),
     };
 
     return this.prisma.outfits.create({ data: prismaData });
   }
 
-  findAll(query: ListQueryDto) {
+  findAll(query: ListQueryDto, currentUserId: string) {
     const { skip, take } = getPagination(query);
     const searchTerm = getSearchTerm(query);
+
+    const searchFilter = searchTerm
+      ? {
+          OR: [
+            { name: { contains: searchTerm, mode: 'insensitive' as const } },
+            { theme: { contains: searchTerm, mode: 'insensitive' as const } },
+          ],
+        }
+      : undefined;
 
     return this.prisma.outfits.findMany({
       skip,
       take,
-      ...(searchTerm
-        ? {
-            where: {
-              OR: [
-                { name: { contains: searchTerm, mode: 'insensitive' } },
-                { theme: { contains: searchTerm, mode: 'insensitive' } },
-              ],
-            },
-          }
-        : {}),
+      where: {
+        user_id: currentUserId,
+        ...(searchFilter ? searchFilter : {}),
+      },
     });
   }
 
-  findOne(outfitId: string) {
-    return this.prisma.outfits.findUnique({
-      where: { outfit_id: outfitId },
+  async findOne(outfitId: string, currentUserId: string) {
+    const outfit = await this.prisma.outfits.findFirst({
+      where: { outfit_id: outfitId, user_id: currentUserId },
     });
+
+    if (!outfit) {
+      throw new NotFoundException('Outfit not found');
+    }
+
+    return outfit;
   }
 
-  update(outfitId: string, data: UpdateOutfitDto) {
-    const { created_at, ...rest } = data;
+  async update(outfitId: string, data: UpdateOutfitDto, currentUserId: string) {
+    await this.findOne(outfitId, currentUserId);
+
+    const { created_at, user_id: _ignoredUserId, ...rest } = data;
 
     const prismaData: Prisma.outfitsUncheckedUpdateInput = {
       ...rest,
@@ -63,7 +77,9 @@ export class OutfitsService {
     });
   }
 
-  remove(outfitId: string) {
+  async remove(outfitId: string, currentUserId: string) {
+    await this.findOne(outfitId, currentUserId);
+
     return this.prisma.outfits.delete({
       where: { outfit_id: outfitId },
     });

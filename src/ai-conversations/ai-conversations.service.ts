@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ListQueryDto } from '../common/dto/list-query.dto';
@@ -10,40 +10,59 @@ import { UpdateAiConversationDto } from './dto/update-ai-conversation.dto';
 export class AiConversationsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(data: CreateAiConversationDto) {
+  create(data: CreateAiConversationDto, currentUserId: string) {
+    const { user_id: _ignoredUserId, ...rest } = data;
+
     const prismaData: Prisma.ai_conversationsUncheckedCreateInput = {
-      ...data,
-      created_at: new Date(data.created_at),
+      ...rest,
+      user_id: currentUserId,
+      created_at: new Date(rest.created_at),
     };
 
     return this.prisma.ai_conversations.create({ data: prismaData });
   }
 
-  findAll(query: ListQueryDto) {
+  findAll(query: ListQueryDto, currentUserId: string) {
     const { skip, take } = getPagination(query);
     const searchTerm = getSearchTerm(query);
 
     return this.prisma.ai_conversations.findMany({
       skip,
       take,
-      ...(searchTerm
-        ? {
-            where: {
-              title: { contains: searchTerm, mode: 'insensitive' },
-            },
-          }
-        : {}),
+      where: {
+        user_id: currentUserId,
+        ...(searchTerm
+          ? {
+              title: { contains: searchTerm, mode: 'insensitive' as const },
+            }
+          : {}),
+      },
     });
   }
 
-  findOne(aiConversationId: string) {
-    return this.prisma.ai_conversations.findUnique({
-      where: { ai_conversation_id: aiConversationId },
+  async findOne(aiConversationId: string, currentUserId: string) {
+    const conversation = await this.prisma.ai_conversations.findFirst({
+      where: {
+        ai_conversation_id: aiConversationId,
+        user_id: currentUserId,
+      },
     });
+
+    if (!conversation) {
+      throw new NotFoundException('AI conversation not found');
+    }
+
+    return conversation;
   }
 
-  update(aiConversationId: string, data: UpdateAiConversationDto) {
-    const { created_at, ...rest } = data;
+  async update(
+    aiConversationId: string,
+    data: UpdateAiConversationDto,
+    currentUserId: string,
+  ) {
+    await this.findOne(aiConversationId, currentUserId);
+
+    const { created_at, user_id: _ignoredUserId, ...rest } = data;
 
     const prismaData: Prisma.ai_conversationsUncheckedUpdateInput = {
       ...rest,
@@ -60,7 +79,9 @@ export class AiConversationsService {
     });
   }
 
-  remove(aiConversationId: string) {
+  async remove(aiConversationId: string, currentUserId: string) {
+    await this.findOne(aiConversationId, currentUserId);
+
     return this.prisma.ai_conversations.delete({
       where: { ai_conversation_id: aiConversationId },
     });

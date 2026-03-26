@@ -9,6 +9,8 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { AuthUser } from '../auth/interfaces/auth-user.interface';
 import { ListQueryDto } from '../common/dto/list-query.dto';
 import { CreateOutfitItemDto } from './dto/create-outfit-item.dto';
 import { OutfitItemsService } from './outfit-items.service';
@@ -19,21 +21,22 @@ export class OutfitItemsController {
   constructor(private readonly outfitItemsService: OutfitItemsService) {}
 
   @Post()
-  create(@Body() data: CreateOutfitItemDto) {
-    return this.outfitItemsService.create(data);
+  create(@Body() data: CreateOutfitItemDto, @CurrentUser() user: AuthUser) {
+    return this.outfitItemsService.create(data, user.userId);
   }
 
   @Get()
-  findAll(@Query() query: ListQueryDto) {
-    return this.outfitItemsService.findAll(query);
+  findAll(@Query() query: ListQueryDto, @CurrentUser() user: AuthUser) {
+    return this.outfitItemsService.findAll(query, user.userId);
   }
 
   @Get(':outfitId/:itemId')
   findOne(
     @Param('outfitId', new ParseUUIDPipe()) outfitId: string,
     @Param('itemId', new ParseUUIDPipe()) itemId: string,
+    @CurrentUser() user: AuthUser,
   ) {
-    return this.outfitItemsService.findOne(outfitId, itemId);
+    return this.outfitItemsService.findOne(outfitId, itemId, user.userId);
   }
 
   @Patch(':outfitId/:itemId')
@@ -41,15 +44,17 @@ export class OutfitItemsController {
     @Param('outfitId', new ParseUUIDPipe()) outfitId: string,
     @Param('itemId', new ParseUUIDPipe()) itemId: string,
     @Body() data: UpdateOutfitItemDto,
+    @CurrentUser() user: AuthUser,
   ) {
-    return this.outfitItemsService.update(outfitId, itemId, data);
+    return this.outfitItemsService.update(outfitId, itemId, data, user.userId);
   }
 
   @Delete(':outfitId/:itemId')
   remove(
     @Param('outfitId', new ParseUUIDPipe()) outfitId: string,
     @Param('itemId', new ParseUUIDPipe()) itemId: string,
+    @CurrentUser() user: AuthUser,
   ) {
-    return this.outfitItemsService.remove(outfitId, itemId);
+    return this.outfitItemsService.remove(outfitId, itemId, user.userId);
   }
 }

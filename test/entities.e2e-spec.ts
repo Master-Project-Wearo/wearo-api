@@ -1,14 +1,19 @@
 import 'dotenv/config';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Client } from 'pg';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { TEST_JWT_SECRET } from '../src/auth/constants';
 import { AppModule } from '../src/app.module';
 
 describe('Entities CRUD (e2e)', () => {
   let app: INestApplication<App>;
   let dbClient: Client;
+
+  let authUserId: string | null = null;
+  let authToken = '';
 
   let userId: string | null = null;
   let typeId: string | null = null;
@@ -18,6 +23,19 @@ describe('Entities CRUD (e2e)', () => {
   let scheduleId: string | null = null;
   let aiMessageId: string | null = null;
   let outfitItemLink: { outfitId: string; itemId: string } | null = null;
+
+  const authHeader = () => ({ Authorization: `Bearer ${authToken}` });
+
+  const authed = {
+    get: (url: string) =>
+      request(app.getHttpServer()).get(url).set(authHeader()),
+    post: (url: string) =>
+      request(app.getHttpServer()).post(url).set(authHeader()),
+    patch: (url: string) =>
+      request(app.getHttpServer()).patch(url).set(authHeader()),
+    delete: (url: string) =>
+      request(app.getHttpServer()).delete(url).set(authHeader()),
+  };
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -42,6 +60,28 @@ describe('Entities CRUD (e2e)', () => {
 
     dbClient = new Client({ connectionString });
     await dbClient.connect();
+
+    const authEmail = `auth.e2e.${Date.now()}@example.com`;
+    const authUserInsert = await dbClient.query(
+      `insert into users (firstname, lastname, email, date_of_birth)
+       values ($1, $2, $3, $4)
+       returning user_id`,
+      ['Auth', 'E2E', authEmail, new Date('1995-01-01T00:00:00.000Z')],
+    );
+
+    authUserId = authUserInsert.rows[0].user_id;
+
+    const secret =
+      process.env.SUPABASE_JWT_SECRET ??
+      process.env.JWT_SECRET ??
+      TEST_JWT_SECRET;
+    const jwtService = new JwtService({ secret });
+
+    authToken = jwtService.sign({
+      sub: authUserId,
+      email: authEmail,
+      role: 'authenticated',
+    });
   });
 
   afterAll(async () => {
@@ -89,19 +129,29 @@ describe('Entities CRUD (e2e)', () => {
       await dbClient.query('delete from users where user_id = $1', [userId]);
     }
 
+    if (authUserId) {
+      await dbClient.query('delete from users where user_id = $1', [
+        authUserId,
+      ]);
+    }
+
     await dbClient.end();
     await app.close();
   });
 
-  it('should validate POST /items payload', async () => {
-    await request(app.getHttpServer()).post('/items').send({}).expect(400);
+  it('should block protected routes without JWT', async () => {
+    await request(app.getHttpServer()).get('/types').expect(401);
   });
 
-  it('should cover CRUD endpoints for all remaining entities', async () => {
+  it('should validate POST /items payload', async () => {
+    await authed.post('/items').send({}).expect(400);
+  });
+
+  it('should cover CRUD endpoints for all entities', async () => {
     const now = new Date();
     const unique = now.getTime();
 
-    const userCreate = await request(app.getHttpServer())
+    const userCreate = await authed
       .post('/users')
       .send({
         firstname: 'Entities',
@@ -114,7 +164,7 @@ describe('Entities CRUD (e2e)', () => {
     userId = userCreate.body.user_id;
     expect(userId).toBeDefined();
 
-    const usersList = await request(app.getHttpServer())
+    const usersList = await authed
       .get('/users')
       .query({ q: 'Entities', page: 1, limit: 20 })
       .expect(200);
@@ -124,16 +174,16 @@ describe('Entities CRUD (e2e)', () => {
       usersList.body.some((row: { user_id: string }) => row.user_id === userId),
     ).toBe(true);
 
-    await request(app.getHttpServer()).get(`/users/${userId}`).expect(200);
+    await authed.get(`/users/${userId}`).expect(200);
 
-    const userUpdate = await request(app.getHttpServer())
+    const userUpdate = await authed
       .patch(`/users/${userId}`)
       .send({ lastname: `Updated-${unique}` })
       .expect(200);
 
     expect(userUpdate.body.lastname).toBe(`Updated-${unique}`);
 
-    const typeCreate = await request(app.getHttpServer())
+    const typeCreate = await authed
       .post('/types')
       .send({
         name: `Type-${unique}`,
@@ -144,7 +194,7 @@ describe('Entities CRUD (e2e)', () => {
     typeId = typeCreate.body.type_id;
     expect(typeId).toBeDefined();
 
-    const typesList = await request(app.getHttpServer())
+    const typesList = await authed
       .get('/types')
       .query({ q: `Type-${unique}`, page: 1, limit: 20 })
       .expect(200);
@@ -154,16 +204,16 @@ describe('Entities CRUD (e2e)', () => {
       typesList.body.some((row: { type_id: string }) => row.type_id === typeId),
     ).toBe(true);
 
-    await request(app.getHttpServer()).get(`/types/${typeId}`).expect(200);
+    await authed.get(`/types/${typeId}`).expect(200);
 
-    const typeUpdate = await request(app.getHttpServer())
+    const typeUpdate = await authed
       .patch(`/types/${typeId}`)
       .send({ description: 'updated type' })
       .expect(200);
 
     expect(typeUpdate.body.description).toBe('updated type');
 
-    const outfitCreate = await request(app.getHttpServer())
+    const outfitCreate = await authed
       .post('/outfits')
       .send({
         name: `Outfit-${unique}`,
@@ -176,7 +226,7 @@ describe('Entities CRUD (e2e)', () => {
     outfitId = outfitCreate.body.outfit_id;
     expect(outfitId).toBeDefined();
 
-    const outfitsList = await request(app.getHttpServer())
+    const outfitsList = await authed
       .get('/outfits')
       .query({ q: `Outfit-${unique}`, page: 1, limit: 20 })
       .expect(200);
@@ -188,16 +238,16 @@ describe('Entities CRUD (e2e)', () => {
       ),
     ).toBe(true);
 
-    await request(app.getHttpServer()).get(`/outfits/${outfitId}`).expect(200);
+    await authed.get(`/outfits/${outfitId}`).expect(200);
 
-    const outfitUpdate = await request(app.getHttpServer())
+    const outfitUpdate = await authed
       .patch(`/outfits/${outfitId}`)
       .send({ theme: 'formal' })
       .expect(200);
 
     expect(outfitUpdate.body.theme).toBe('formal');
 
-    const aiConversationCreate = await request(app.getHttpServer())
+    const aiConversationCreate = await authed
       .post('/ai-conversations')
       .send({
         title: `Conversation-${unique}`,
@@ -209,7 +259,7 @@ describe('Entities CRUD (e2e)', () => {
     aiConversationId = aiConversationCreate.body.ai_conversation_id;
     expect(aiConversationId).toBeDefined();
 
-    const aiConversationsList = await request(app.getHttpServer())
+    const aiConversationsList = await authed
       .get('/ai-conversations')
       .query({ q: `Conversation-${unique}`, page: 1, limit: 20 })
       .expect(200);
@@ -222,11 +272,9 @@ describe('Entities CRUD (e2e)', () => {
       ),
     ).toBe(true);
 
-    await request(app.getHttpServer())
-      .get(`/ai-conversations/${aiConversationId}`)
-      .expect(200);
+    await authed.get(`/ai-conversations/${aiConversationId}`).expect(200);
 
-    const aiConversationUpdate = await request(app.getHttpServer())
+    const aiConversationUpdate = await authed
       .patch(`/ai-conversations/${aiConversationId}`)
       .send({ title: `Conversation-updated-${unique}` })
       .expect(200);
@@ -235,7 +283,7 @@ describe('Entities CRUD (e2e)', () => {
       `Conversation-updated-${unique}`,
     );
 
-    const itemCreate = await request(app.getHttpServer())
+    const itemCreate = await authed
       .post('/items')
       .send({
         name: `Item-${unique}`,
@@ -249,7 +297,7 @@ describe('Entities CRUD (e2e)', () => {
     itemId = itemCreate.body.item_id;
     expect(itemId).toBeDefined();
 
-    const itemsList = await request(app.getHttpServer())
+    const itemsList = await authed
       .get('/items')
       .query({ q: `Item-${unique}`, page: 1, limit: 20 })
       .expect(200);
@@ -259,16 +307,16 @@ describe('Entities CRUD (e2e)', () => {
       itemsList.body.some((row: { item_id: string }) => row.item_id === itemId),
     ).toBe(true);
 
-    await request(app.getHttpServer()).get(`/items/${itemId}`).expect(200);
+    await authed.get(`/items/${itemId}`).expect(200);
 
-    const itemUpdate = await request(app.getHttpServer())
+    const itemUpdate = await authed
       .patch(`/items/${itemId}`)
       .send({ brand: 'updated-brand' })
       .expect(200);
 
     expect(itemUpdate.body.brand).toBe('updated-brand');
 
-    const outfitItemCreate = await request(app.getHttpServer())
+    const outfitItemCreate = await authed
       .post('/outfit-items')
       .send({
         outfit_id: outfitId,
@@ -284,7 +332,7 @@ describe('Entities CRUD (e2e)', () => {
     expect(outfitItemLink.outfitId).toBe(outfitId);
     expect(outfitItemLink.itemId).toBe(itemId);
 
-    const outfitItemsList = await request(app.getHttpServer())
+    const outfitItemsList = await authed
       .get('/outfit-items')
       .query({ page: 1, limit: 20 })
       .expect(200);
@@ -297,11 +345,9 @@ describe('Entities CRUD (e2e)', () => {
       ),
     ).toBe(true);
 
-    await request(app.getHttpServer())
-      .get(`/outfit-items/${outfitId}/${itemId}`)
-      .expect(200);
+    await authed.get(`/outfit-items/${outfitId}/${itemId}`).expect(200);
 
-    await request(app.getHttpServer())
+    await authed
       .patch(`/outfit-items/${outfitId}/${itemId}`)
       .send({
         outfit_id: outfitId,
@@ -309,7 +355,7 @@ describe('Entities CRUD (e2e)', () => {
       })
       .expect(200);
 
-    const scheduleCreate = await request(app.getHttpServer())
+    const scheduleCreate = await authed
       .post('/schedules')
       .send({
         planned_for: new Date(now.getTime() + 86400000).toISOString(),
@@ -322,7 +368,7 @@ describe('Entities CRUD (e2e)', () => {
     scheduleId = scheduleCreate.body.schedule_id;
     expect(scheduleId).toBeDefined();
 
-    const schedulesList = await request(app.getHttpServer())
+    const schedulesList = await authed
       .get('/schedules')
       .query({ page: 1, limit: 20 })
       .expect(200);
@@ -334,11 +380,9 @@ describe('Entities CRUD (e2e)', () => {
       ),
     ).toBe(true);
 
-    await request(app.getHttpServer())
-      .get(`/schedules/${scheduleId}`)
-      .expect(200);
+    await authed.get(`/schedules/${scheduleId}`).expect(200);
 
-    const scheduleUpdate = await request(app.getHttpServer())
+    const scheduleUpdate = await authed
       .patch(`/schedules/${scheduleId}`)
       .send({
         planned_for: new Date(now.getTime() + 172800000).toISOString(),
@@ -347,7 +391,7 @@ describe('Entities CRUD (e2e)', () => {
 
     expect(scheduleUpdate.body.schedule_id).toBe(scheduleId);
 
-    const aiMessageCreate = await request(app.getHttpServer())
+    const aiMessageCreate = await authed
       .post('/ai-messages')
       .send({
         content: `Message-${unique}`,
@@ -361,7 +405,7 @@ describe('Entities CRUD (e2e)', () => {
     aiMessageId = aiMessageCreate.body.ai_message_id;
     expect(aiMessageId).toBeDefined();
 
-    const aiMessagesList = await request(app.getHttpServer())
+    const aiMessagesList = await authed
       .get('/ai-messages')
       .query({ q: `Message-${unique}`, page: 1, limit: 20 })
       .expect(200);
@@ -373,32 +417,30 @@ describe('Entities CRUD (e2e)', () => {
       ),
     ).toBe(true);
 
-    await request(app.getHttpServer())
-      .get(`/ai-messages/${aiMessageId}`)
-      .expect(200);
+    await authed.get(`/ai-messages/${aiMessageId}`).expect(200);
 
-    const aiMessageUpdate = await request(app.getHttpServer())
+    const aiMessageUpdate = await authed
       .patch(`/ai-messages/${aiMessageId}`)
       .send({ role: 'assistant' })
       .expect(200);
 
     expect(aiMessageUpdate.body.role).toBe('assistant');
 
-    const aiMessageDelete = await request(app.getHttpServer())
+    const aiMessageDelete = await authed
       .delete(`/ai-messages/${aiMessageId}`)
       .expect(200);
 
     expect(aiMessageDelete.body.ai_message_id).toBe(aiMessageId);
     aiMessageId = null;
 
-    const scheduleDelete = await request(app.getHttpServer())
+    const scheduleDelete = await authed
       .delete(`/schedules/${scheduleId}`)
       .expect(200);
 
     expect(scheduleDelete.body.schedule_id).toBe(scheduleId);
     scheduleId = null;
 
-    const outfitItemDelete = await request(app.getHttpServer())
+    const outfitItemDelete = await authed
       .delete(`/outfit-items/${outfitId}/${itemId}`)
       .expect(200);
 
@@ -406,37 +448,31 @@ describe('Entities CRUD (e2e)', () => {
     expect(outfitItemDelete.body.item_id).toBe(itemId);
     outfitItemLink = null;
 
-    const itemDelete = await request(app.getHttpServer())
-      .delete(`/items/${itemId}`)
-      .expect(200);
+    const itemDelete = await authed.delete(`/items/${itemId}`).expect(200);
 
     expect(itemDelete.body.item_id).toBe(itemId);
     itemId = null;
 
-    const aiConversationDelete = await request(app.getHttpServer())
+    const aiConversationDelete = await authed
       .delete(`/ai-conversations/${aiConversationId}`)
       .expect(200);
 
     expect(aiConversationDelete.body.ai_conversation_id).toBe(aiConversationId);
     aiConversationId = null;
 
-    const outfitDelete = await request(app.getHttpServer())
+    const outfitDelete = await authed
       .delete(`/outfits/${outfitId}`)
       .expect(200);
 
     expect(outfitDelete.body.outfit_id).toBe(outfitId);
     outfitId = null;
 
-    const typeDelete = await request(app.getHttpServer())
-      .delete(`/types/${typeId}`)
-      .expect(200);
+    const typeDelete = await authed.delete(`/types/${typeId}`).expect(200);
 
     expect(typeDelete.body.type_id).toBe(typeId);
     typeId = null;
 
-    const userDelete = await request(app.getHttpServer())
-      .delete(`/users/${userId}`)
-      .expect(200);
+    const userDelete = await authed.delete(`/users/${userId}`).expect(200);
 
     expect(userDelete.body.user_id).toBe(userId);
     userId = null;
