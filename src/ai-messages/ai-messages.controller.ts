@@ -7,7 +7,9 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
+import { ListQueryDto } from '../common/dto/list-query.dto';
 import { CreateAiMessageDto } from './dto/create-ai-message.dto';
 import { UpdateAiMessageDto } from './dto/update-ai-message.dto';
 import { AiMessagesService } from './ai-messages.service';
@@ -22,8 +24,8 @@ export class AiMessagesController {
   }
 
   @Get()
-  findAll() {
-    return this.aiMessagesService.findAll();
+  findAll(@Query() query: ListQueryDto) {
+    return this.aiMessagesService.findAll(query);
   }
 
   @Get(':aiMessageId')

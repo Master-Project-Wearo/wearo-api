@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ListQueryDto } from '../common/dto/list-query.dto';
+import { getPagination, getSearchTerm } from '../common/utils/list-query.util';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -17,8 +19,25 @@ export class UsersService {
     return this.prisma.users.create({ data: prismaData });
   }
 
-  findAll() {
-    return this.prisma.users.findMany();
+  findAll(query: ListQueryDto) {
+    const { skip, take } = getPagination(query);
+    const searchTerm = getSearchTerm(query);
+
+    return this.prisma.users.findMany({
+      skip,
+      take,
+      ...(searchTerm
+        ? {
+            where: {
+              OR: [
+                { firstname: { contains: searchTerm, mode: 'insensitive' } },
+                { lastname: { contains: searchTerm, mode: 'insensitive' } },
+                { email: { contains: searchTerm, mode: 'insensitive' } },
+              ],
+            },
+          }
+        : {}),
+    });
   }
 
   findOne(userId: string) {

@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ListQueryDto } from '../common/dto/list-query.dto';
+import { getPagination, getSearchTerm } from '../common/utils/list-query.util';
 import { CreateAiConversationDto } from './dto/create-ai-conversation.dto';
 import { UpdateAiConversationDto } from './dto/update-ai-conversation.dto';
 
@@ -17,8 +19,21 @@ export class AiConversationsService {
     return this.prisma.ai_conversations.create({ data: prismaData });
   }
 
-  findAll() {
-    return this.prisma.ai_conversations.findMany();
+  findAll(query: ListQueryDto) {
+    const { skip, take } = getPagination(query);
+    const searchTerm = getSearchTerm(query);
+
+    return this.prisma.ai_conversations.findMany({
+      skip,
+      take,
+      ...(searchTerm
+        ? {
+            where: {
+              title: { contains: searchTerm, mode: 'insensitive' },
+            },
+          }
+        : {}),
+    });
   }
 
   findOne(aiConversationId: string) {

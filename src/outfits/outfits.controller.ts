@@ -7,7 +7,9 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
+import { ListQueryDto } from '../common/dto/list-query.dto';
 import { CreateOutfitDto } from './dto/create-outfit.dto';
 import { UpdateOutfitDto } from './dto/update-outfit.dto';
 import { OutfitsService } from './outfits.service';
@@ -22,8 +24,8 @@ export class OutfitsController {
   }
 
   @Get()
-  findAll() {
-    return this.outfitsService.findAll();
+  findAll(@Query() query: ListQueryDto) {
+    return this.outfitsService.findAll(query);
   }
 
   @Get(':outfitId')

@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ListQueryDto } from '../common/dto/list-query.dto';
+import { getPagination, getSearchTerm } from '../common/utils/list-query.util';
 import { CreateAiMessageDto } from './dto/create-ai-message.dto';
 import { UpdateAiMessageDto } from './dto/update-ai-message.dto';
 
@@ -17,8 +19,24 @@ export class AiMessagesService {
     return this.prisma.ai_messages.create({ data: prismaData });
   }
 
-  findAll() {
-    return this.prisma.ai_messages.findMany();
+  findAll(query: ListQueryDto) {
+    const { skip, take } = getPagination(query);
+    const searchTerm = getSearchTerm(query);
+
+    return this.prisma.ai_messages.findMany({
+      skip,
+      take,
+      ...(searchTerm
+        ? {
+            where: {
+              OR: [
+                { content: { contains: searchTerm, mode: 'insensitive' } },
+                { role: { contains: searchTerm, mode: 'insensitive' } },
+              ],
+            },
+          }
+        : {}),
+    });
   }
 
   findOne(aiMessageId: string) {

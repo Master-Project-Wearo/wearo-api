@@ -90,6 +90,17 @@ describe('ItemsController (e2e)', () => {
 
     expect(findOneResponse.body.item_id).toBe(createdItemId);
 
+    const listResponse = await request(app.getHttpServer())
+      .get('/items')
+      .query({ q: 'E2E Item', page: 1, limit: 1 })
+      .expect(200);
+
+    expect(Array.isArray(listResponse.body)).toBe(true);
+    expect(listResponse.body.length).toBeLessThanOrEqual(1);
+    expect(
+      listResponse.body.some((item: { item_id: string }) => item.item_id === createdItemId),
+    ).toBe(true);
+
     const updateResponse = await request(app.getHttpServer())
       .patch(`/items/${createdItemId}`)
       .send({ brand: 'E2E Brand' })

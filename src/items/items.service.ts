@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ListQueryDto } from '../common/dto/list-query.dto';
+import { getPagination, getSearchTerm } from '../common/utils/list-query.util';
 import { CreateItemDto } from './dto/create-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
 
@@ -26,8 +28,30 @@ export class ItemsService {
     });
   }
 
-  findAll() {
-    return this.prisma.items.findMany();
+  findAll(query: ListQueryDto) {
+    const { skip, take } = getPagination(query);
+    const searchTerm = getSearchTerm(query);
+
+    return this.prisma.items.findMany({
+      skip,
+      take,
+      ...(searchTerm
+        ? {
+            where: {
+              OR: [
+                { name: { contains: searchTerm, mode: 'insensitive' } },
+                { brand: { contains: searchTerm, mode: 'insensitive' } },
+                {
+                  ai_description: {
+                    contains: searchTerm,
+                    mode: 'insensitive',
+                  },
+                },
+              ],
+            },
+          }
+        : {}),
+    });
   }
 
   findOne(itemId: string) {

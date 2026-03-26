@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ListQueryDto } from '../common/dto/list-query.dto';
+import { getPagination } from '../common/utils/list-query.util';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
 
@@ -18,8 +20,13 @@ export class SchedulesService {
     return this.prisma.schedules.create({ data: prismaData });
   }
 
-  findAll() {
-    return this.prisma.schedules.findMany();
+  findAll(query: ListQueryDto) {
+    const { skip, take } = getPagination(query);
+
+    return this.prisma.schedules.findMany({
+      skip,
+      take,
+    });
   }
 
   findOne(scheduleId: string) {

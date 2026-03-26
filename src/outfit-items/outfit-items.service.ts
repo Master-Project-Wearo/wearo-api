@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ListQueryDto } from '../common/dto/list-query.dto';
+import { getPagination } from '../common/utils/list-query.util';
 import { CreateOutfitItemDto } from './dto/create-outfit-item.dto';
 import { UpdateOutfitItemDto } from './dto/update-outfit-item.dto';
 
@@ -16,8 +18,13 @@ export class OutfitItemsService {
     return this.prisma.outfit_items.create({ data: prismaData });
   }
 
-  findAll() {
-    return this.prisma.outfit_items.findMany();
+  findAll(query: ListQueryDto) {
+    const { skip, take } = getPagination(query);
+
+    return this.prisma.outfit_items.findMany({
+      skip,
+      take,
+    });
   }
 
   findOne(outfitId: string, itemId: string) {

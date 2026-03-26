@@ -7,7 +7,9 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
+import { ListQueryDto } from '../common/dto/list-query.dto';
 import { CreateTypeDto } from './dto/create-type.dto';
 import { UpdateTypeDto } from './dto/update-type.dto';
 import { TypesService } from './types.service';
@@ -22,8 +24,8 @@ export class TypesController {
   }
 
   @Get()
-  findAll() {
-    return this.typesService.findAll();
+  findAll(@Query() query: ListQueryDto) {
+    return this.typesService.findAll(query);
   }
 
   @Get(':typeId')

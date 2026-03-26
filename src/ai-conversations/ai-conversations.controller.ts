@@ -7,7 +7,9 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
+import { ListQueryDto } from '../common/dto/list-query.dto';
 import { CreateAiConversationDto } from './dto/create-ai-conversation.dto';
 import { UpdateAiConversationDto } from './dto/update-ai-conversation.dto';
 import { AiConversationsService } from './ai-conversations.service';
@@ -24,8 +26,8 @@ export class AiConversationsController {
   }
 
   @Get()
-  findAll() {
-    return this.aiConversationsService.findAll();
+  findAll(@Query() query: ListQueryDto) {
+    return this.aiConversationsService.findAll(query);
   }
 
   @Get(':aiConversationId')
