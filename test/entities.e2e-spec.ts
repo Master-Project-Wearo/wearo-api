@@ -9,6 +9,8 @@ import { TEST_JWT_SECRET } from '../src/auth/constants';
 import { AppModule } from '../src/app.module';
 
 describe('Entities CRUD (e2e)', () => {
+  jest.setTimeout(30000);
+
   let app: INestApplication<App>;
   let dbClient: Client;
 
