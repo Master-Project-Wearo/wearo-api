@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ListQueryDto } from '../common/dto/list-query.dto';
@@ -43,13 +43,21 @@ export class TypesService {
     });
   }
 
-  findOne(typeId: string) {
-    return this.prisma.types.findUnique({
+  async findOne(typeId: string) {
+    const type = await this.prisma.types.findUnique({
       where: { type_id: typeId },
     });
+
+    if (!type) {
+      throw new NotFoundException('Type not found');
+    }
+
+    return type;
   }
 
-  update(typeId: string, data: UpdateTypeDto) {
+  async update(typeId: string, data: UpdateTypeDto) {
+    await this.findOne(typeId);
+
     const prismaData: Prisma.typesUncheckedUpdateInput = {
       ...data,
     };
@@ -60,7 +68,9 @@ export class TypesService {
     });
   }
 
-  remove(typeId: string) {
+  async remove(typeId: string) {
+    await this.findOne(typeId);
+
     return this.prisma.types.delete({
       where: { type_id: typeId },
     });

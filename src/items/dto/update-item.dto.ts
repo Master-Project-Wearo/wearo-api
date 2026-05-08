@@ -2,6 +2,7 @@ import {
   IsArray,
   IsBoolean,
   IsNumber,
+  IsObject,
   IsOptional,
   IsString,
   IsUUID,
@@ -26,6 +27,7 @@ export class UpdateItemDto {
   ai_description?: string;
 
   @IsOptional()
+  @IsObject()
   ai_attributes?: Record<string, unknown>;
 
   @IsOptional()
