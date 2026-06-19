@@ -14,6 +14,8 @@ model ai_conversations {
   user_id            String        @db.Uuid
   users              users         @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
   ai_messages        ai_messages[]
+
+  @@index([user_id, created_at], map: "idx_ai_conversations_user_created")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -24,8 +26,11 @@ model ai_messages {
   created_at         DateTime         @db.Timestamptz(6)
   ai_conversation_id String           @db.Uuid
   outfit_id          String?          @db.Uuid
-  ai_conversations   ai_conversations @relation(fields: [ai_conversation_id], references: [ai_conversation_id], onDelete: NoAction, onUpdate: NoAction)
-  outfits            outfits?         @relation(fields: [outfit_id], references: [outfit_id], onDelete: NoAction, onUpdate: NoAction)
+  ai_conversations   ai_conversations @relation(fields: [ai_conversation_id], references: [ai_conversation_id], onDelete: Cascade, onUpdate: NoAction)
+  outfits            outfits?         @relation(fields: [outfit_id], references: [outfit_id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([ai_conversation_id, created_at], map: "idx_ai_messages_conversation_created")
+  @@index([outfit_id], map: "idx_ai_messages_outfit")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -44,9 +49,12 @@ model items {
   added_at       DateTime               @db.Timestamptz(6)
   user_id        String                 @db.Uuid
   type_id        String?                @db.Uuid
-  types          types?                 @relation(fields: [type_id], references: [type_id], onDelete: NoAction, onUpdate: NoAction)
+  types          types?                 @relation(fields: [type_id], references: [type_id], onDelete: SetNull, onUpdate: NoAction)
   users          users                  @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
   outfit_items   outfit_items[]
+
+  @@index([user_id, added_at], map: "idx_items_user_added")
+  @@index([type_id], map: "idx_items_type")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -57,6 +65,7 @@ model outfit_items {
   outfits   outfits @relation(fields: [outfit_id], references: [outfit_id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([outfit_id, item_id])
+  @@index([item_id], map: "idx_outfit_items_item")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -72,6 +81,8 @@ model outfits {
   outfit_items     outfit_items[]
   users            users          @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
   schedules        schedules[]
+
+  @@index([user_id, created_at], map: "idx_outfits_user_created")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -83,6 +94,9 @@ model schedules {
   outfit_id   String   @db.Uuid
   outfits     outfits  @relation(fields: [outfit_id], references: [outfit_id], onDelete: Cascade, onUpdate: NoAction)
   users       users    @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id, planned_for], map: "idx_schedules_user_planned")
+  @@index([outfit_id], map: "idx_schedules_outfit")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
