@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
+import { randomUUID } from 'node:crypto';
 import { Client } from 'pg';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -64,14 +65,14 @@ describe('Entities CRUD (e2e)', () => {
     await dbClient.connect();
 
     const authEmail = `auth.e2e.${Date.now()}@example.com`;
-    const authUserInsert = await dbClient.query(
-      `insert into users (firstname, lastname, email, date_of_birth)
-       values ($1, $2, $3, $4)
-       returning user_id`,
-      ['Auth', 'E2E', authEmail, new Date('1995-01-01T00:00:00.000Z')],
-    );
+    authUserId = randomUUID();
+    const now = new Date();
 
-    authUserId = authUserInsert.rows[0].user_id;
+    await dbClient.query(
+      `insert into auth.users (id, aud, role, email, created_at, updated_at)
+       values ($1, $2, $3, $4, $5, $5)`,
+      [authUserId, 'authenticated', 'authenticated', authEmail, now],
+    );
 
     const secret =
       process.env.SUPABASE_JWT_SECRET ??
@@ -136,6 +137,11 @@ describe('Entities CRUD (e2e)', () => {
         authUserId,
       ]);
     }
+    if (authUserId) {
+      await dbClient.query('delete from auth.users where id = $1', [
+        authUserId,
+      ]);
+    }
 
     await dbClient.end();
     await app.close();
@@ -159,7 +165,6 @@ describe('Entities CRUD (e2e)', () => {
         firstname: 'Entities',
         lastname: `E2E-${unique}`,
         email: `entities.e2e.${unique}@example.com`,
-        date_of_birth: new Date('2000-01-01T00:00:00.000Z').toISOString(),
       })
       .expect(201);
 
@@ -477,6 +482,14 @@ describe('Entities CRUD (e2e)', () => {
     const userDelete = await authed.delete(`/users/${userId}`).expect(200);
 
     expect(userDelete.body.user_id).toBe(userId);
+
+    const deletedAuthUser = await dbClient.query(
+      'select id from auth.users where id = $1',
+      [authUserId],
+    );
+    expect(deletedAuthUser.rowCount).toBe(0);
+
     userId = null;
+    authUserId = null;
   });
 });

@@ -95,14 +95,14 @@ model types {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model users {
-  user_id              String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id              String             @id @db.Uuid
   profile_picture_url  String?
   background_image_url String?
-  firstname            String
-  lastname             String
+  firstname            String?
+  lastname             String?
   email                String             @unique
   description          String?
-  date_of_birth        DateTime           @db.Timestamptz(6)
+  created_at           DateTime           @db.Timestamptz(6)
   ai_conversations     ai_conversations[]
   items                items[]
   outfits              outfits[]

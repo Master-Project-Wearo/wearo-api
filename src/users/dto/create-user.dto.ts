@@ -1,4 +1,4 @@
-import { IsDateString, IsEmail, IsOptional, IsString } from 'class-validator';
+import { IsEmail, IsOptional, IsString } from 'class-validator';
 
 export class CreateUserDto {
   @IsOptional()
@@ -21,7 +21,4 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   description?: string;
-
-  @IsDateString()
-  date_of_birth!: string;
 }

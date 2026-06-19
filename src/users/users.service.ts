@@ -25,13 +25,12 @@ export class UsersService {
       user_id: currentUserId,
       ...data,
       email,
-      date_of_birth: new Date(data.date_of_birth),
+      created_at: new Date(),
     };
 
     const updateData: Prisma.usersUncheckedUpdateInput = {
       ...data,
       email,
-      date_of_birth: new Date(data.date_of_birth),
     };
 
     return this.prisma.users.upsert({
@@ -95,7 +94,7 @@ export class UsersService {
       throw new ForbiddenException('You can only update your own user profile');
     }
 
-    const { date_of_birth, email, ...rest } = data;
+    const { email, ...rest } = data;
 
     const prismaData: Prisma.usersUncheckedUpdateInput = {
       ...rest,
@@ -108,11 +107,6 @@ export class UsersService {
               email,
             }
           : {}),
-      ...(date_of_birth !== undefined
-        ? {
-            date_of_birth: new Date(date_of_birth),
-          }
-        : {}),
     };
 
     return this.prisma.users.update({
@@ -121,13 +115,19 @@ export class UsersService {
     });
   }
 
-  remove(userId: string, currentUserId: string) {
+  async remove(userId: string, currentUserId: string) {
     if (userId !== currentUserId) {
-      throw new ForbiddenException('You can only delete your own user profile');
+      throw new ForbiddenException('You can only delete your own account');
     }
 
-    return this.prisma.users.delete({
-      where: { user_id: userId },
-    });
+    const user = await this.findOne(userId, currentUserId);
+
+    // Supabase owns auth.users; its foreign key cascades to the public profile.
+    await this.prisma.$executeRaw`
+      DELETE FROM auth.users
+      WHERE id = ${userId}::uuid
+    `;
+
+    return user;
   }
 }
