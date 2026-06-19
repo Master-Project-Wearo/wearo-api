@@ -58,13 +58,23 @@ Ownership is now enforced from the JWT `sub` claim (current authenticated user i
 
 Covered user-owned resources:
 
-- `users` (self profile only)
 - `items`
 - `outfits`
 - `schedules`
 - `ai-conversations`
 - `ai-messages` (through owned conversation/outfit)
 - `outfit-items` (both linked resources must be owned)
+
+User profile routes:
+
+- `GET /users` lists profiles for administration.
+- `PATCH /users/:userId` updates a profile for administration.
+- `GET /users/me` returns the authenticated user's profile.
+- `PATCH /users/me` updates the authenticated user's profile.
+
+The two admin-oriented routes are not role-gated yet. Profile creation, deletion,
+email synchronization, and timestamps are owned by Supabase Auth and database
+triggers, not by this API.
 
 ## Password Storage
 

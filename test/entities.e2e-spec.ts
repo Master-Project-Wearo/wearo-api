@@ -16,6 +16,7 @@ describe('Entities CRUD (e2e)', () => {
   let dbClient: Client;
 
   let authUserId: string | null = null;
+  let authEmail = '';
   let authToken = '';
 
   let userId: string | null = null;
@@ -64,7 +65,7 @@ describe('Entities CRUD (e2e)', () => {
     dbClient = new Client({ connectionString });
     await dbClient.connect();
 
-    const authEmail = `auth.e2e.${Date.now()}@example.com`;
+    authEmail = `auth.e2e.${Date.now()}@example.com`;
     authUserId = randomUUID();
     const now = new Date();
 
@@ -128,15 +129,6 @@ describe('Entities CRUD (e2e)', () => {
       await dbClient.query('delete from types where type_id = $1', [typeId]);
     }
 
-    if (userId) {
-      await dbClient.query('delete from users where user_id = $1', [userId]);
-    }
-
-    if (authUserId) {
-      await dbClient.query('delete from users where user_id = $1', [
-        authUserId,
-      ]);
-    }
     if (authUserId) {
       await dbClient.query('delete from auth.users where id = $1', [
         authUserId,
@@ -159,21 +151,12 @@ describe('Entities CRUD (e2e)', () => {
     const now = new Date();
     const unique = now.getTime();
 
-    const userCreate = await authed
-      .post('/users')
-      .send({
-        firstname: 'Entities',
-        lastname: `E2E-${unique}`,
-        email: `entities.e2e.${unique}@example.com`,
-      })
-      .expect(201);
-
-    userId = userCreate.body.user_id;
+    userId = authUserId;
     expect(userId).toBeDefined();
 
     const usersList = await authed
       .get('/users')
-      .query({ q: 'Entities', page: 1, limit: 20 })
+      .query({ q: authEmail, page: 1, limit: 20 })
       .expect(200);
 
     expect(Array.isArray(usersList.body)).toBe(true);
@@ -181,14 +164,32 @@ describe('Entities CRUD (e2e)', () => {
       usersList.body.some((row: { user_id: string }) => row.user_id === userId),
     ).toBe(true);
 
-    await authed.get(`/users/${userId}`).expect(200);
+    const currentUser = await authed.get('/users/me').expect(200);
+    expect(currentUser.body.user_id).toBe(userId);
+    expect(currentUser.body.email).toBe(authEmail);
 
-    const userUpdate = await authed
-      .patch(`/users/${userId}`)
-      .send({ lastname: `Updated-${unique}` })
+    const selfUpdate = await authed
+      .patch('/users/me')
+      .send({ firstname: 'Entities', lastname: `Updated-${unique}` })
       .expect(200);
 
-    expect(userUpdate.body.lastname).toBe(`Updated-${unique}`);
+    expect(selfUpdate.body.lastname).toBe(`Updated-${unique}`);
+
+    const adminUpdate = await authed
+      .patch(`/users/${userId}`)
+      .send({ description: `Admin update ${unique}` })
+      .expect(200);
+
+    expect(adminUpdate.body.description).toBe(`Admin update ${unique}`);
+
+    await authed
+      .patch('/users/me')
+      .send({ email: `forbidden.${unique}@example.com` })
+      .expect(400);
+
+    await authed.get(`/users/${userId}`).expect(404);
+    await authed.post('/users').send({}).expect(404);
+    await authed.delete(`/users/${userId}`).expect(404);
 
     const typeCreate = await authed
       .post('/types')
@@ -478,18 +479,5 @@ describe('Entities CRUD (e2e)', () => {
 
     expect(typeDelete.body.type_id).toBe(typeId);
     typeId = null;
-
-    const userDelete = await authed.delete(`/users/${userId}`).expect(200);
-
-    expect(userDelete.body.user_id).toBe(userId);
-
-    const deletedAuthUser = await dbClient.query(
-      'select id from auth.users where id = $1',
-      [authUserId],
-    );
-    expect(deletedAuthUser.rowCount).toBe(0);
-
-    userId = null;
-    authUserId = null;
   });
 });
