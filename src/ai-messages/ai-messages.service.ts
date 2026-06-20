@@ -50,7 +50,6 @@ export class AiMessagesService {
 
     const prismaData: Prisma.ai_messagesUncheckedCreateInput = {
       ...data,
-      created_at: new Date(data.created_at),
     };
 
     return this.prisma.ai_messages.create({ data: prismaData });
@@ -72,6 +71,7 @@ export class AiMessagesService {
     return this.prisma.ai_messages.findMany({
       skip,
       take,
+      orderBy: [{ created_at: 'asc' }, { ai_message_id: 'asc' }],
       where: {
         ai_conversations: {
           user_id: currentUserId,
@@ -103,15 +103,13 @@ export class AiMessagesService {
     data: UpdateAiMessageDto,
     currentUserId: string,
   ) {
-    await this.findOne(aiMessageId, currentUserId);
-
-    const { created_at, ai_conversation_id, outfit_id, ...rest } = data;
+    const { ai_conversation_id, outfit_id, ...rest } = data;
 
     if (ai_conversation_id !== undefined) {
       await this.assertConversationOwnership(ai_conversation_id, currentUserId);
     }
 
-    if (outfit_id !== undefined) {
+    if (outfit_id !== undefined && outfit_id !== null) {
       await this.assertOutfitOwnership(outfit_id, currentUserId);
     }
 
@@ -119,24 +117,23 @@ export class AiMessagesService {
       ...rest,
       ...(ai_conversation_id !== undefined ? { ai_conversation_id } : {}),
       ...(outfit_id !== undefined ? { outfit_id } : {}),
-      ...(created_at !== undefined
-        ? {
-            created_at: new Date(created_at),
-          }
-        : {}),
     };
 
     return this.prisma.ai_messages.update({
-      where: { ai_message_id: aiMessageId },
+      where: {
+        ai_message_id: aiMessageId,
+        ai_conversations: { user_id: currentUserId },
+      },
       data: prismaData,
     });
   }
 
   async remove(aiMessageId: string, currentUserId: string) {
-    await this.findOne(aiMessageId, currentUserId);
-
     return this.prisma.ai_messages.delete({
-      where: { ai_message_id: aiMessageId },
+      where: {
+        ai_message_id: aiMessageId,
+        ai_conversations: { user_id: currentUserId },
+      },
     });
   }
 }

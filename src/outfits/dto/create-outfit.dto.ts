@@ -1,10 +1,8 @@
 import {
   IsBoolean,
-  IsDateString,
   IsNumber,
   IsOptional,
   IsString,
-  IsUUID,
   Min,
 } from 'class-validator';
 
@@ -24,11 +22,4 @@ export class CreateOutfitDto {
   @IsOptional()
   @IsBoolean()
   is_favorite?: boolean;
-
-  @IsDateString()
-  created_at!: string;
-
-  @IsOptional()
-  @IsUUID()
-  user_id?: string;
 }

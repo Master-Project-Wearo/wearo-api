@@ -11,12 +11,9 @@ export class OutfitsService {
   constructor(private readonly prisma: PrismaService) {}
 
   create(data: CreateOutfitDto, currentUserId: string) {
-    const { user_id: _ignoredUserId, ...rest } = data;
-
     const prismaData: Prisma.outfitsUncheckedCreateInput = {
-      ...rest,
+      ...data,
       user_id: currentUserId,
-      created_at: new Date(rest.created_at),
     };
 
     return this.prisma.outfits.create({ data: prismaData });
@@ -38,6 +35,7 @@ export class OutfitsService {
     return this.prisma.outfits.findMany({
       skip,
       take,
+      orderBy: [{ created_at: 'desc' }, { outfit_id: 'desc' }],
       where: {
         user_id: currentUserId,
         ...(searchFilter ? searchFilter : {}),
@@ -58,30 +56,19 @@ export class OutfitsService {
   }
 
   async update(outfitId: string, data: UpdateOutfitDto, currentUserId: string) {
-    await this.findOne(outfitId, currentUserId);
-
-    const { created_at, user_id: _ignoredUserId, ...rest } = data;
-
     const prismaData: Prisma.outfitsUncheckedUpdateInput = {
-      ...rest,
-      ...(created_at !== undefined
-        ? {
-            created_at: new Date(created_at),
-          }
-        : {}),
+      ...data,
     };
 
     return this.prisma.outfits.update({
-      where: { outfit_id: outfitId },
+      where: { outfit_id: outfitId, user_id: currentUserId },
       data: prismaData,
     });
   }
 
   async remove(outfitId: string, currentUserId: string) {
-    await this.findOne(outfitId, currentUserId);
-
     return this.prisma.outfits.delete({
-      where: { outfit_id: outfitId },
+      where: { outfit_id: outfitId, user_id: currentUserId },
     });
   }
 }

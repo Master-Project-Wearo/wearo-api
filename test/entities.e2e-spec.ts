@@ -16,6 +16,7 @@ describe('Entities CRUD (e2e)', () => {
   let dbClient: Client;
 
   let authUserId: string | null = null;
+  let otherAuthUserId: string | null = null;
   let authEmail = '';
   let authToken = '';
 
@@ -83,6 +84,7 @@ describe('Entities CRUD (e2e)', () => {
 
     authToken = jwtService.sign({
       sub: authUserId,
+      aud: 'authenticated',
       email: authEmail,
       role: 'authenticated',
     });
@@ -135,6 +137,12 @@ describe('Entities CRUD (e2e)', () => {
       ]);
     }
 
+    if (otherAuthUserId) {
+      await dbClient.query('delete from auth.users where id = $1', [
+        otherAuthUserId,
+      ]);
+    }
+
     await dbClient.end();
     await app.close();
   });
@@ -142,9 +150,13 @@ describe('Entities CRUD (e2e)', () => {
   it('should block protected routes without JWT', async () => {
     await request(app.getHttpServer()).get('/types').expect(401);
   });
-
+  w;
   it('should validate POST /items payload', async () => {
     await authed.post('/items').send({}).expect(400);
+    await authed
+      .post('/items')
+      .send({ name: 'Spoofed item', colors: [], user_id: randomUUID() })
+      .expect(400);
   });
 
   it('should cover CRUD endpoints for all entities', async () => {
@@ -154,15 +166,7 @@ describe('Entities CRUD (e2e)', () => {
     userId = authUserId;
     expect(userId).toBeDefined();
 
-    const usersList = await authed
-      .get('/users')
-      .query({ q: authEmail, page: 1, limit: 20 })
-      .expect(200);
-
-    expect(Array.isArray(usersList.body)).toBe(true);
-    expect(
-      usersList.body.some((row: { user_id: string }) => row.user_id === userId),
-    ).toBe(true);
+    await authed.get('/users').expect(404);
 
     const currentUser = await authed.get('/users/me').expect(200);
     expect(currentUser.body.user_id).toBe(userId);
@@ -175,12 +179,10 @@ describe('Entities CRUD (e2e)', () => {
 
     expect(selfUpdate.body.lastname).toBe(`Updated-${unique}`);
 
-    const adminUpdate = await authed
+    await authed
       .patch(`/users/${userId}`)
       .send({ description: `Admin update ${unique}` })
-      .expect(200);
-
-    expect(adminUpdate.body.description).toBe(`Admin update ${unique}`);
+      .expect(404);
 
     await authed
       .patch('/users/me')
@@ -191,16 +193,13 @@ describe('Entities CRUD (e2e)', () => {
     await authed.post('/users').send({}).expect(404);
     await authed.delete(`/users/${userId}`).expect(404);
 
-    const typeCreate = await authed
-      .post('/types')
-      .send({
-        name: `Type-${unique}`,
-        description: 'e2e type',
-      })
-      .expect(201);
+    typeId = randomUUID();
+    await dbClient.query(
+      'insert into types (type_id, name, description) values ($1, $2, $3)',
+      [typeId, `Type-${unique}`, 'e2e type'],
+    );
 
-    typeId = typeCreate.body.type_id;
-    expect(typeId).toBeDefined();
+    await authed.post('/types').send({ name: 'forbidden' }).expect(404);
 
     const typesList = await authed
       .get('/types')
@@ -214,25 +213,33 @@ describe('Entities CRUD (e2e)', () => {
 
     await authed.get(`/types/${typeId}`).expect(200);
 
-    const typeUpdate = await authed
+    await authed
       .patch(`/types/${typeId}`)
       .send({ description: 'updated type' })
-      .expect(200);
+      .expect(404);
 
-    expect(typeUpdate.body.description).toBe('updated type');
+    await authed.delete(`/types/${typeId}`).expect(404);
+
+    await authed
+      .post('/items')
+      .send({
+        name: 'Invalid relation',
+        colors: [],
+        type_id: randomUUID(),
+      })
+      .expect(400);
 
     const outfitCreate = await authed
       .post('/outfits')
       .send({
         name: `Outfit-${unique}`,
         theme: 'casual',
-        created_at: now.toISOString(),
-        user_id: userId,
       })
       .expect(201);
 
     outfitId = outfitCreate.body.outfit_id;
     expect(outfitId).toBeDefined();
+    expect(outfitCreate.body.created_at).toBeDefined();
 
     const outfitsList = await authed
       .get('/outfits')
@@ -259,13 +266,12 @@ describe('Entities CRUD (e2e)', () => {
       .post('/ai-conversations')
       .send({
         title: `Conversation-${unique}`,
-        created_at: now.toISOString(),
-        user_id: userId,
       })
       .expect(201);
 
     aiConversationId = aiConversationCreate.body.ai_conversation_id;
     expect(aiConversationId).toBeDefined();
+    expect(aiConversationCreate.body.created_at).toBeDefined();
 
     const aiConversationsList = await authed
       .get('/ai-conversations')
@@ -296,14 +302,41 @@ describe('Entities CRUD (e2e)', () => {
       .send({
         name: `Item-${unique}`,
         colors: ['black'],
-        added_at: now.toISOString(),
-        user_id: userId,
         type_id: typeId,
       })
       .expect(201);
 
     itemId = itemCreate.body.item_id;
     expect(itemId).toBeDefined();
+    expect(itemCreate.body.added_at).toBeDefined();
+
+    otherAuthUserId = randomUUID();
+    const otherEmail = `other.e2e.${unique}@example.com`;
+    await dbClient.query(
+      `insert into auth.users (id, aud, role, email, created_at, updated_at)
+       values ($1, $2, $3, $4, $5, $5)`,
+      [otherAuthUserId, 'authenticated', 'authenticated', otherEmail, now],
+    );
+
+    const ownerToken = authToken;
+    const secret =
+      process.env.SUPABASE_JWT_SECRET ??
+      process.env.JWT_SECRET ??
+      TEST_JWT_SECRET;
+    authToken = new JwtService({ secret }).sign({
+      sub: otherAuthUserId,
+      aud: 'authenticated',
+      email: otherEmail,
+      role: 'authenticated',
+    });
+
+    await authed.get(`/items/${itemId}`).expect(404);
+    await authed
+      .patch(`/items/${itemId}`)
+      .send({ brand: 'hijack' })
+      .expect(404);
+    await authed.delete(`/items/${itemId}`).expect(404);
+    authToken = ownerToken;
 
     const itemsList = await authed
       .get('/items')
@@ -367,14 +400,13 @@ describe('Entities CRUD (e2e)', () => {
       .post('/schedules')
       .send({
         planned_for: new Date(now.getTime() + 86400000).toISOString(),
-        created_at: now.toISOString(),
-        user_id: userId,
         outfit_id: outfitId,
       })
       .expect(201);
 
     scheduleId = scheduleCreate.body.schedule_id;
     expect(scheduleId).toBeDefined();
+    expect(scheduleCreate.body.created_at).toBeDefined();
 
     const schedulesList = await authed
       .get('/schedules')
@@ -404,7 +436,6 @@ describe('Entities CRUD (e2e)', () => {
       .send({
         content: `Message-${unique}`,
         role: 'user',
-        created_at: now.toISOString(),
         ai_conversation_id: aiConversationId,
         outfit_id: outfitId,
       })
@@ -412,6 +443,7 @@ describe('Entities CRUD (e2e)', () => {
 
     aiMessageId = aiMessageCreate.body.ai_message_id;
     expect(aiMessageId).toBeDefined();
+    expect(aiMessageCreate.body.created_at).toBeDefined();
 
     const aiMessagesList = await authed
       .get('/ai-messages')
@@ -474,10 +506,5 @@ describe('Entities CRUD (e2e)', () => {
 
     expect(outfitDelete.body.outfit_id).toBe(outfitId);
     outfitId = null;
-
-    const typeDelete = await authed.delete(`/types/${typeId}`).expect(200);
-
-    expect(typeDelete.body.type_id).toBe(typeId);
-    typeId = null;
   });
 });

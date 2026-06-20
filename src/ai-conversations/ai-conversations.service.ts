@@ -11,12 +11,9 @@ export class AiConversationsService {
   constructor(private readonly prisma: PrismaService) {}
 
   create(data: CreateAiConversationDto, currentUserId: string) {
-    const { user_id: _ignoredUserId, ...rest } = data;
-
     const prismaData: Prisma.ai_conversationsUncheckedCreateInput = {
-      ...rest,
+      ...data,
       user_id: currentUserId,
-      created_at: new Date(rest.created_at),
     };
 
     return this.prisma.ai_conversations.create({ data: prismaData });
@@ -29,6 +26,7 @@ export class AiConversationsService {
     return this.prisma.ai_conversations.findMany({
       skip,
       take,
+      orderBy: [{ created_at: 'desc' }, { ai_conversation_id: 'desc' }],
       where: {
         user_id: currentUserId,
         ...(searchTerm
@@ -60,30 +58,25 @@ export class AiConversationsService {
     data: UpdateAiConversationDto,
     currentUserId: string,
   ) {
-    await this.findOne(aiConversationId, currentUserId);
-
-    const { created_at, user_id: _ignoredUserId, ...rest } = data;
-
     const prismaData: Prisma.ai_conversationsUncheckedUpdateInput = {
-      ...rest,
-      ...(created_at !== undefined
-        ? {
-            created_at: new Date(created_at),
-          }
-        : {}),
+      ...data,
     };
 
     return this.prisma.ai_conversations.update({
-      where: { ai_conversation_id: aiConversationId },
+      where: {
+        ai_conversation_id: aiConversationId,
+        user_id: currentUserId,
+      },
       data: prismaData,
     });
   }
 
   async remove(aiConversationId: string, currentUserId: string) {
-    await this.findOne(aiConversationId, currentUserId);
-
     return this.prisma.ai_conversations.delete({
-      where: { ai_conversation_id: aiConversationId },
+      where: {
+        ai_conversation_id: aiConversationId,
+        user_id: currentUserId,
+      },
     });
   }
 }

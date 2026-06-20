@@ -1,10 +1,8 @@
 import {
   IsBoolean,
-  IsDateString,
   IsNumber,
   IsOptional,
   IsString,
-  IsUUID,
   Min,
 } from 'class-validator';
 
@@ -25,12 +23,4 @@ export class UpdateOutfitDto {
   @IsOptional()
   @IsBoolean()
   is_favorite?: boolean;
-
-  @IsOptional()
-  @IsDateString()
-  created_at?: string;
-
-  @IsOptional()
-  @IsUUID()
-  user_id?: string;
 }

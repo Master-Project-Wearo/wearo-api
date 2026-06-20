@@ -1,151 +1,94 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Wearo API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+NestJS API backed by the Wearo Supabase PostgreSQL database and Prisma.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Requirements
 
-## Description
+- Node.js 20.19 or newer
+- A Supabase project using HS256 access tokens
+- PostgreSQL connection strings for the Supabase pooler and direct database
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Environment
 
-## Project setup
+Create `.env` from `.env.example` and set:
 
-```bash
-$ npm install
-```
+- `DATABASE_URL`: pooled Supabase connection used by the API
+- `DIRECT_URL`: direct Supabase connection used by Prisma CLI and introspection
+- `SUPABASE_JWT_SECRET`: Supabase legacy JWT secret
+- `CORS_ORIGINS`: comma-separated allowed frontend origins
+- `PORT`: HTTP port; Render supplies this automatically
 
-## Authentication
+Never commit `.env` or expose `SUPABASE_JWT_SECRET` to the frontend.
 
-This API now uses the standard NestJS JWT stack (`@nestjs/passport` + `passport-jwt`) with a global guard.
+## Access Model
 
-- All routes are protected by default.
-- Public routes:
-  - `GET /`
-  - `GET /auth/health`
-- `GET /auth/me` returns the decoded authenticated user from the bearer token.
+Every business route requires a Supabase bearer token. Public routes are `GET /`
+and `GET /auth/health`.
 
-Set one of these environment variables:
-
-- `SUPABASE_JWT_SECRET` (recommended when tokens come from Supabase)
-- `JWT_SECRET` (fallback)
-
-In tests, if neither is provided, a test-only fallback secret is used automatically.
-
-## Ownership Rules
-
-Ownership is now enforced from the JWT `sub` claim (current authenticated user id):
-
-- User-owned resources are filtered by JWT identity in the API layer.
-- Incoming `user_id` for owned creates is ignored in favor of `JWT.sub`.
-- Accessing another user's resource returns not found or forbidden depending on route context.
-
-Covered user-owned resources:
+The JWT `sub` claim is the only user identifier trusted by the API. Client
+payloads cannot set `user_id`, `created_at`, or `added_at`. Owned resources are
+filtered by that identifier:
 
 - `items`
 - `outfits`
 - `schedules`
 - `ai-conversations`
-- `ai-messages` (through owned conversation/outfit)
-- `outfit-items` (both linked resources must be owned)
+- `ai-messages`, through their conversation
+- `outfit-items`, through both linked resources
 
-User profile routes:
+Profile access is limited to `GET /users/me` and `PATCH /users/me`.
 
-- `GET /users` lists profiles for administration.
-- `PATCH /users/:userId` updates a profile for administration.
-- `GET /users/me` returns the authenticated user's profile.
-- `PATCH /users/me` updates the authenticated user's profile.
+`types` is read-only in the API: `GET /types` and `GET /types/:typeId`. Create,
+update, and delete operations are performed by an administrator in Supabase.
 
-The two admin-oriented routes are not role-gated yet. Profile creation, deletion,
-email synchronization, and timestamps are owned by Supabase Auth and database
-triggers, not by this API.
+## Database Schema
 
-## Password Storage
+`prisma/schema.prisma` represents the application tables in the `public`
+schema. The database foreign key from `public.users` to `auth.users` is kept in
+Supabase but intentionally omitted from Prisma Client so the API does not model
+or expose Supabase-owned authentication tables.
 
-If you use Supabase Auth for login, do not add a custom plaintext password column in your app tables.
-
-- Email/password credentials are handled and hashed by Supabase Auth.
-- Your `users` table should remain a profile/business table.
-- The API should trust JWT claims and enforce ownership/authorization on data access.
-
-## Compile and run the project
+To inspect drift without overwriting the application schema:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npx prisma db pull --print --schemas public,auth
 ```
 
-## Run tests
+Review the output and copy only relevant `public` changes. Database migrations,
+RLS policies, triggers, and admin data changes remain managed in Supabase.
+
+## Development
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm ci
+npx prisma generate
+npm run start:dev
 ```
 
-## Deployment
+Swagger is available at `/api-docs`.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Verification
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run lint -- --no-fix
+npx tsc --noEmit
+npm test -- --runInBand
+npm run test:e2e -- --runInBand
+npm run build
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+The e2e suite connects to Supabase and creates temporary records that it removes
+after the run. Do not run it against a database where test writes are forbidden.
 
-## Resources
+## Render
 
-Check out a few resources that may come in handy when working with NestJS:
+Create a Render Web Service with:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+- Build command: `npm ci && npx prisma generate && npm run build`
+- Start command: `npm run start:prod`
+- Health check path: `/auth/health`
 
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Set `DATABASE_URL`, `SUPABASE_JWT_SECRET`, `CORS_ORIGINS`, and
+`NODE_ENV=production` in Render. `DIRECT_URL` is only necessary there if Prisma
+CLI operations are intentionally run during deployment; schema changes should
+normally be applied from Supabase instead.

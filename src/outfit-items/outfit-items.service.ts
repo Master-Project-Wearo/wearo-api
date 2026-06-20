@@ -49,6 +49,7 @@ export class OutfitItemsService {
     return this.prisma.outfit_items.findMany({
       skip,
       take,
+      orderBy: [{ outfit_id: 'asc' }, { item_id: 'asc' }],
       where: {
         outfits: { user_id: currentUserId },
         items: { user_id: currentUserId },
@@ -79,8 +80,6 @@ export class OutfitItemsService {
     data: UpdateOutfitItemDto,
     currentUserId: string,
   ) {
-    await this.findOne(outfitId, itemId, currentUserId);
-
     const nextOutfitId = data.outfit_id ?? outfitId;
     const nextItemId = data.item_id ?? itemId;
 
@@ -98,20 +97,22 @@ export class OutfitItemsService {
           outfit_id: outfitId,
           item_id: itemId,
         },
+        outfits: { user_id: currentUserId },
+        items: { user_id: currentUserId },
       },
       data: prismaData,
     });
   }
 
   async remove(outfitId: string, itemId: string, currentUserId: string) {
-    await this.findOne(outfitId, itemId, currentUserId);
-
     return this.prisma.outfit_items.delete({
       where: {
         outfit_id_item_id: {
           outfit_id: outfitId,
           item_id: itemId,
         },
+        outfits: { user_id: currentUserId },
+        items: { user_id: currentUserId },
       },
     });
   }

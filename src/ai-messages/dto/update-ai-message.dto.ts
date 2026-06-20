@@ -1,4 +1,4 @@
-import { IsDateString, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class UpdateAiMessageDto {
   @IsOptional()
@@ -10,14 +10,10 @@ export class UpdateAiMessageDto {
   role?: string;
 
   @IsOptional()
-  @IsDateString()
-  created_at?: string;
-
-  @IsOptional()
   @IsUUID()
   ai_conversation_id?: string;
 
   @IsOptional()
   @IsUUID()
-  outfit_id?: string;
+  outfit_id?: string | null;
 }

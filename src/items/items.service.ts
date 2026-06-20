@@ -11,12 +11,11 @@ export class ItemsService {
   constructor(private readonly prisma: PrismaService) {}
 
   create(data: CreateItemDto, currentUserId: string) {
-    const { ai_attributes, added_at, user_id: _ignoredUserId, ...rest } = data;
+    const { ai_attributes, ...rest } = data;
 
     const prismaData: Prisma.itemsUncheckedCreateInput = {
       ...rest,
       user_id: currentUserId,
-      added_at: new Date(added_at),
       ...(ai_attributes !== undefined
         ? {
             ai_attributes: ai_attributes as Prisma.InputJsonValue,
@@ -51,6 +50,7 @@ export class ItemsService {
     return this.prisma.items.findMany({
       skip,
       take,
+      orderBy: [{ added_at: 'desc' }, { item_id: 'desc' }],
       where: {
         user_id: currentUserId,
         ...(searchFilter ? searchFilter : {}),
@@ -71,8 +71,6 @@ export class ItemsService {
   }
 
   async update(itemId: string, data: UpdateItemDto, currentUserId: string) {
-    await this.findOne(itemId, currentUserId);
-
     const { ai_attributes, ...rest } = data;
 
     const prismaData: Prisma.itemsUncheckedUpdateInput = {
@@ -85,16 +83,14 @@ export class ItemsService {
     };
 
     return this.prisma.items.update({
-      where: { item_id: itemId },
+      where: { item_id: itemId, user_id: currentUserId },
       data: prismaData,
     });
   }
 
   async remove(itemId: string, currentUserId: string) {
-    await this.findOne(itemId, currentUserId);
-
     return this.prisma.items.delete({
-      where: { item_id: itemId },
+      where: { item_id: itemId, user_id: currentUserId },
     });
   }
 }

@@ -1,7 +1,6 @@
 import {
   IsArray,
   IsBoolean,
-  IsDateString,
   IsNumber,
   IsObject,
   IsOptional,
@@ -46,13 +45,6 @@ export class CreateItemDto {
   @IsOptional()
   @IsBoolean()
   is_favorite?: boolean;
-
-  @IsDateString()
-  added_at!: string;
-
-  @IsOptional()
-  @IsUUID()
-  user_id?: string;
 
   @IsOptional()
   @IsUUID()

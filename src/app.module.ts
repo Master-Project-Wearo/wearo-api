@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -13,6 +13,7 @@ import { SchedulesModule } from './schedules/schedules.module';
 import { TypesModule } from './types/types.module';
 import { UsersModule } from './users/users.module';
 import { OutfitItemsModule } from './outfit-items/outfit-items.module';
+import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 
 @Module({
   imports: [
@@ -33,6 +34,10 @@ import { OutfitItemsModule } from './outfit-items/outfit-items.module';
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: PrismaExceptionFilter,
     },
   ],
 })

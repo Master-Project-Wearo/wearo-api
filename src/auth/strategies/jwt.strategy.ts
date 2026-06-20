@@ -6,6 +6,7 @@ import { AuthUser } from '../interfaces/auth-user.interface';
 
 type JwtPayload = {
   sub?: string;
+  aud?: string | string[];
   email?: string;
   role?: string;
 };
@@ -27,6 +28,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       ignoreExpiration: false,
       secretOrKey: secret,
       algorithms: ['HS256'],
+      audience: 'authenticated',
     });
   }
 

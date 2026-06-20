@@ -1,4 +1,4 @@
-import { IsDateString, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateAiMessageDto {
   @IsString()
@@ -6,9 +6,6 @@ export class CreateAiMessageDto {
 
   @IsString()
   role!: string;
-
-  @IsDateString()
-  created_at!: string;
 
   @IsUUID()
   ai_conversation_id!: string;
