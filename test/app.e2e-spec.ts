@@ -1,25 +1,38 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
-import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
+import { E2eContext, type TestUser } from './support/e2e-context';
 
-describe('AppController (e2e)', () => {
-  let app: INestApplication<App>;
+describe('Application and authentication (e2e)', () => {
+  const context = new E2eContext();
+  let user: TestUser;
 
-  beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    await app.init();
+  beforeAll(async () => {
+    await context.start();
+    user = await context.createUser('app-e2e');
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
+  afterAll(async () => {
+    await context.stop();
+  });
+
+  it('exposes public root and database health routes', async () => {
+    await context.publicRequest().get('/').expect(200).expect('Hello World!');
+    await context
+      .publicRequest()
+      .get('/auth/health')
       .expect(200)
-      .expect('Hello World!');
+      .expect({ ok: true });
+  });
+
+  it('blocks protected routes without a JWT', async () => {
+    await context.publicRequest().get('/types').expect(401);
+  });
+
+  it('returns the identity from the validated token', async () => {
+    const response = await context.as(user).get('/auth/me').expect(200);
+
+    expect(response.body).toEqual({
+      userId: user.id,
+      email: user.email,
+      role: 'authenticated',
+    });
   });
 });

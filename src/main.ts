@@ -1,10 +1,16 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { Express } from 'express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  const expressApp = app.getHttpAdapter().getInstance() as Express;
+  expressApp.set('trust proxy', 1);
+  app.use(helmet());
 
   const corsOrigins = process.env.CORS_ORIGINS?.split(',')
     .map((origin) => origin.trim())
@@ -24,8 +30,8 @@ async function bootstrap() {
   );
 
   const config = new DocumentBuilder()
-    .setTitle('API NestJS - Supabase')
-    .setDescription('Documentation des routes de l API Wearo')
+    .setTitle('Wearo API')
+    .setDescription('API utilisateur de l application Wearo')
     .setVersion('1.0')
     .addBearerAuth(
       {

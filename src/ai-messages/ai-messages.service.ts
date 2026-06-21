@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ListQueryDto } from '../common/dto/list-query.dto';
 import { getPagination, getSearchTerm } from '../common/utils/list-query.util';
+import { AI_MESSAGE_ROLES, type AiMessageRole } from './ai-message-role';
 import { CreateAiMessageDto } from './dto/create-ai-message.dto';
 import { UpdateAiMessageDto } from './dto/update-ai-message.dto';
 
@@ -38,7 +39,27 @@ export class AiMessagesService {
     }
   }
 
-  async create(data: CreateAiMessageDto, currentUserId: string) {
+  create(data: CreateAiMessageDto, currentUserId: string) {
+    return this.createOwnedMessage(data, currentUserId, AI_MESSAGE_ROLES.USER);
+  }
+
+  /**
+   * Persists a response produced by the server-side AI integration.
+   * This method is intentionally not exposed directly by the controller.
+   */
+  createAssistantResponse(data: CreateAiMessageDto, currentUserId: string) {
+    return this.createOwnedMessage(
+      data,
+      currentUserId,
+      AI_MESSAGE_ROLES.ASSISTANT,
+    );
+  }
+
+  private async createOwnedMessage(
+    data: CreateAiMessageDto,
+    currentUserId: string,
+    role: AiMessageRole,
+  ) {
     await this.assertConversationOwnership(
       data.ai_conversation_id,
       currentUserId,
@@ -50,6 +71,7 @@ export class AiMessagesService {
 
     const prismaData: Prisma.ai_messagesUncheckedCreateInput = {
       ...data,
+      role,
     };
 
     return this.prisma.ai_messages.create({ data: prismaData });

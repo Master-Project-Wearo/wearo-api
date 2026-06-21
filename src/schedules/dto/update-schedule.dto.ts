@@ -1,11 +1,4 @@
-import { IsDateString, IsOptional, IsUUID } from 'class-validator';
+import { PartialType } from '@nestjs/swagger';
+import { CreateScheduleDto } from './create-schedule.dto';
 
-export class UpdateScheduleDto {
-  @IsOptional()
-  @IsDateString()
-  planned_for?: string;
-
-  @IsOptional()
-  @IsUUID()
-  outfit_id?: string;
-}
+export class UpdateScheduleDto extends PartialType(CreateScheduleDto) {}

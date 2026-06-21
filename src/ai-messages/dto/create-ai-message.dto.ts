@@ -1,11 +1,16 @@
-import { IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateAiMessageDto {
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(20000)
   content!: string;
-
-  @IsString()
-  role!: string;
 
   @IsUUID()
   ai_conversation_id!: string;

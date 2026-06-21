@@ -1,23 +1,28 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
 
 export class UpdateUserDto {
   @IsOptional()
-  @IsString()
+  @IsUrl({ require_protocol: true })
+  @MaxLength(2048)
   profile_picture_url?: string;
 
   @IsOptional()
-  @IsString()
+  @IsUrl({ require_protocol: true })
+  @MaxLength(2048)
   background_image_url?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   firstname?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   lastname?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   description?: string;
 }

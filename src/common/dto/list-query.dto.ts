@@ -1,5 +1,12 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class ListQueryDto {
   @IsOptional()
@@ -17,5 +24,6 @@ export class ListQueryDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   q?: string;
 }

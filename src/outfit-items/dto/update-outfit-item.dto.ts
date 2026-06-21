@@ -1,11 +1,4 @@
-import { IsOptional, IsUUID } from 'class-validator';
+import { PartialType } from '@nestjs/swagger';
+import { CreateOutfitItemDto } from './create-outfit-item.dto';
 
-export class UpdateOutfitItemDto {
-  @IsOptional()
-  @IsUUID()
-  outfit_id?: string;
-
-  @IsOptional()
-  @IsUUID()
-  item_id?: string;
-}
+export class UpdateOutfitItemDto extends PartialType(CreateOutfitItemDto) {}

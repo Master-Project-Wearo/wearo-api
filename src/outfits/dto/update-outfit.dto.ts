@@ -1,26 +1,4 @@
-import {
-  IsBoolean,
-  IsNumber,
-  IsOptional,
-  IsString,
-  Min,
-} from 'class-validator';
+import { PartialType } from '@nestjs/swagger';
+import { CreateOutfitDto } from './create-outfit.dto';
 
-export class UpdateOutfitDto {
-  @IsOptional()
-  @IsString()
-  name?: string;
-
-  @IsOptional()
-  @IsString()
-  theme?: string;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  calculated_price?: number;
-
-  @IsOptional()
-  @IsBoolean()
-  is_favorite?: boolean;
-}
+export class UpdateOutfitDto extends PartialType(CreateOutfitDto) {}

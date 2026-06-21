@@ -1,7 +1,6 @@
-import { IsOptional, IsString } from 'class-validator';
+import { PartialType } from '@nestjs/swagger';
+import { CreateAiConversationDto } from './create-ai-conversation.dto';
 
-export class UpdateAiConversationDto {
-  @IsOptional()
-  @IsString()
-  title?: string;
-}
+export class UpdateAiConversationDto extends PartialType(
+  CreateAiConversationDto,
+) {}

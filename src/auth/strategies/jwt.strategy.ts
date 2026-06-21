@@ -16,7 +16,7 @@ type JwtPayload = {
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor() {
     const isTest = process.env.NODE_ENV === 'test';
-    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/$/, '');
 
     if (!isTest && !supabaseUrl) {
       throw new Error('SUPABASE_URL must be set in production/development');
@@ -32,6 +32,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             algorithms: ['HS256'],
           }
         : {
+            issuer: `${supabaseUrl}/auth/v1`,
             secretOrKeyProvider: passportJwtSecret({
               cache: true,
               rateLimit: true,
@@ -44,7 +45,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   validate(payload: JwtPayload): AuthUser {
-    if (!payload.sub) {
+    if (!payload.sub || payload.role !== 'authenticated') {
       throw new UnauthorizedException('Invalid token payload');
     }
 

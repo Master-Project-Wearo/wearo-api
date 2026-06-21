@@ -1,13 +1,17 @@
-import { IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
 
 export class UpdateAiMessageDto {
   @IsOptional()
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(20000)
   content?: string;
-
-  @IsOptional()
-  @IsString()
-  role?: string;
 
   @IsOptional()
   @IsUUID()
