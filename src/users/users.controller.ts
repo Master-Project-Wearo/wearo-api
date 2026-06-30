@@ -1,8 +1,15 @@
-import { Body, Controller, Get, Headers, Patch } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Req } from '@nestjs/common';
+import { Request } from 'express';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthUser } from '../auth/interfaces/auth-user.interface';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
+
+type RequestWithAuthorizationHeader = Request & {
+  headers: Request['headers'] & {
+    authorization?: string;
+  };
+};
 
 @Controller('users')
 export class UsersController {
@@ -17,8 +24,12 @@ export class UsersController {
   updateMe(
     @Body() data: UpdateUserDto,
     @CurrentUser() user: AuthUser,
-    @Headers('authorization') authorization?: string,
+    @Req() request: RequestWithAuthorizationHeader,
   ) {
-    return this.usersService.update(user.userId, data, authorization);
+    return this.usersService.update(
+      user.userId,
+      data,
+      request.headers.authorization,
+    );
   }
 }

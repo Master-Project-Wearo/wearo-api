@@ -14,7 +14,7 @@ describe('SupabaseAuthService', () => {
     service = new SupabaseAuthService();
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
-    }) as jest.Mock;
+    });
   });
 
   afterEach(() => {
@@ -50,7 +50,7 @@ describe('SupabaseAuthService', () => {
       ok: false,
       status: 500,
       text: jest.fn().mockResolvedValue('boom'),
-    }) as jest.Mock;
+    });
 
     await expect(
       service.updateNickname('Bearer user-token', 'Adr'),
