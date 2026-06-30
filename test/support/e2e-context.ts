@@ -8,6 +8,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
 import { TEST_JWT_SECRET } from '../../src/auth/constants';
+import { SupabaseAuthService } from '../../src/users/supabase-auth.service';
 
 export type TestUser = {
   id: string;
@@ -25,7 +26,10 @@ export class E2eContext {
   async start() {
     const moduleFixture = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(SupabaseAuthService)
+      .useValue({ updateNickname: jest.fn().mockResolvedValue(undefined) })
+      .compile();
 
     this.app = moduleFixture.createNestApplication();
     this.app.useGlobalPipes(

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Patch } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthUser } from '../auth/interfaces/auth-user.interface';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -14,7 +14,11 @@ export class UsersController {
   }
 
   @Patch('me')
-  updateMe(@Body() data: UpdateUserDto, @CurrentUser() user: AuthUser) {
-    return this.usersService.update(user.userId, data);
+  updateMe(
+    @Body() data: UpdateUserDto,
+    @CurrentUser() user: AuthUser,
+    @Headers('authorization') authorization?: string,
+  ) {
+    return this.usersService.update(user.userId, data, authorization);
   }
 }
