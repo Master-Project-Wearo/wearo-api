@@ -38,11 +38,11 @@ describe('UsersService', () => {
     prisma.users.findUnique.mockResolvedValue({ user_id: 'user-1' });
     prisma.users.update.mockResolvedValue({ user_id: 'user-1' });
 
-    await service.update('user-1', { firstname: 'Ada' });
+    await service.update('user-1', { nickname: 'Ada' });
 
     expect(prisma.users.update).toHaveBeenCalledWith({
       where: { user_id: 'user-1' },
-      data: { firstname: 'Ada' },
+      data: { nickname: 'Ada' },
     });
   });
 });

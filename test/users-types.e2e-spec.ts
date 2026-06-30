@@ -25,9 +25,9 @@ describe('Users and types (e2e)', () => {
     const updated = await context
       .as(user)
       .patch('/users/me')
-      .send({ firstname: 'Ada', lastname: 'Lovelace' })
+      .send({ nickname: 'Ada' })
       .expect(200);
-    expect(updated.body.firstname).toBe('Ada');
+    expect(updated.body.nickname).toBe('Ada');
 
     await context
       .as(user)
