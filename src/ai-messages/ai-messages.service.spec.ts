@@ -4,7 +4,6 @@ import {
   createPrismaMock,
   type PrismaMock,
 } from '../../test/support/prisma-mock';
-import { AI_MESSAGE_ROLES } from './ai-message-role';
 import { AiMessagesService } from './ai-messages.service';
 
 describe('AiMessagesService', () => {
@@ -34,7 +33,7 @@ describe('AiMessagesService', () => {
       data: {
         content: 'Hello',
         ai_conversation_id: 'conversation-1',
-        role: AI_MESSAGE_ROLES.USER,
+        role: 'user',
       },
     });
   });
@@ -54,7 +53,7 @@ describe('AiMessagesService', () => {
       data: {
         content: 'AI response',
         ai_conversation_id: 'conversation-1',
-        role: AI_MESSAGE_ROLES.ASSISTANT,
+        role: 'assistant',
       },
     });
   });

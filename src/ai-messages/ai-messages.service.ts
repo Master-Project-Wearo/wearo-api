@@ -3,9 +3,15 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ListQueryDto } from '../common/dto/list-query.dto';
 import { getPagination, getSearchTerm } from '../common/utils/list-query.util';
-import { AI_MESSAGE_ROLES, type AiMessageRole } from './ai-message-role';
 import { CreateAiMessageDto } from './dto/create-ai-message.dto';
 import { UpdateAiMessageDto } from './dto/update-ai-message.dto';
+
+const AI_MESSAGE_ROLES = {
+  USER: 'user',
+  ASSISTANT: 'assistant',
+} as const;
+
+type AiMessageRole = (typeof AI_MESSAGE_ROLES)[keyof typeof AI_MESSAGE_ROLES];
 
 @Injectable()
 export class AiMessagesService {
